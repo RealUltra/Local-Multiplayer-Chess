@@ -100,7 +100,22 @@ def handle_client(connection, address):
                     break
 
         except Exception as e:
-            print("Error:", e)
+            if connection in clients:
+                code = clients[connection]
+                servers[code].remove(connection)
+                clients.pop(connection)
+
+                for conn in servers[code]:
+                    server.send("[OPPONENT LEFT]", conn)
+                    clients.pop(conn)
+
+                servers.pop(code)
+
+            server.clients -= 1
+            server.CLIENTS.remove(connection)
+            print(f"\n[CLIENT DISCONNECTED] [{address}] Just Disconnected!")
+            print(f"[ACTIVE CONNECTIONS] {server.clients}\n")
+            break
 
     connection.close()
 

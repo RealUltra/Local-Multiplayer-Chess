@@ -133,9 +133,9 @@ class Chess():
         self.window.fill((0, 0, 0))
 
         font = pygame.font.Font('fonts\\cpgb.ttf', 60)
-        self.window.blit(font.render("Waiting For", True, (255, 215, 0), (0, 0, 0)), (50, 0, 500, 100))
-        self.window.blit(font.render("A Player", True, (255, 215, 0), (0, 0, 0)), (95, 70, 500, 100))
-        self.window.blit(font.render("To Join", True, (255, 215, 0), (0, 0, 0)), (140, 140, 500, 100))
+        self.window.blit(font.render("Join", True, (255, 215, 0), (0, 0, 0)), (50, 0, 500, 100))
+        self.window.blit(font.render("A Game", True, (255, 215, 0), (0, 0, 0)), (95, 70, 500, 100))
+        self.window.blit(font.render("With Code", True, (255, 215, 0), (0, 0, 0)), (140, 140, 500, 100))
 
         font = pygame.font.Font('fonts\\helvetica.ttf', 33)
         pygame.draw.rect(self.window, (152,251,152), (0, 300, 500, 100))
@@ -231,7 +231,7 @@ class Chess():
                 pass
 
         elif self.mode == "MainMenu":
-            if m_y > 450 and m_y < 450:
+            if m_y > 350 and m_y < 450:
                 self.mode = "JoinWithCode"
             elif m_y > 200 and m_y < 300:
                 self.joinRandomGame()
@@ -242,7 +242,7 @@ class Chess():
                 self.mode = "MainMenu"
             elif m_y > 300 and m_y < 400:
                 pyperclip.copy(self.mode.split("|")[1].strip())
-            ctypes.windll.user32.MessageBoxW(0, "The Join Code Has Been Copied To Your Clipboard!", "Code Copied", 48)
+                ctypes.windll.user32.MessageBoxW(0, "The Join Code Has Been Copied To Your Clipboard!", "Code Copied", 48)
 
         elif self.mode == "JoinWithCode":
             if m_y > 500 and m_y < 600:
