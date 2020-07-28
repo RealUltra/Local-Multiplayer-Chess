@@ -26,9 +26,9 @@ class Chess():
     def __init__(self):
         pygame.init()
 
-        self.client = network.Client(self.handle_message, "", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
+        self.client = network.Client(self.handle_message, "192.168.100.5", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
 
-        self.HEIGHT = 600
+        self.HEIGHT = 650
         self.WIDTH = 500
 
         self.window = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -64,6 +64,8 @@ class Chess():
         self.beaten_pieces = []
         self.boardPos = {}
         self.selected_piece_pos = None
+        self.opponent_just_moved = False
+        self.opponent_just_moved_iter = 0
 
         if self.team == 0:
             self.opponent_move = True
@@ -76,6 +78,8 @@ class Chess():
             old, new = message.replace("[MOVE]", "").split("|")
             self.opponent_move = [old.strip(), new.strip()]
             self.move(old.strip(), new.strip())
+            self.opponent_just_moved = [old.strip(), new.strip()]
+            self.opponent_just_moved_iter = 0
 
         if message.strip() == "[JOIN WITH CODE FAILED]":
             ctypes.windll.user32.MessageBoxW(0, "Invalid Code", "Failed To Join", 48)
@@ -164,9 +168,33 @@ class Chess():
             self.window.fill((255,255,255))
 
             if self.mode == "Game":
+                if self.opponent_move == None:
+                    if self.team == 0:
+                        self.window.fill((0,0,0))
+                    else:
+                        self.window.fill((255, 255, 255))
+
+                else:
+                    if self.team == 0:
+                        self.window.fill((255, 255, 255))
+                    else:
+                        self.window.fill((0,0,0))
+
                 self.createBoard(self.team)
                 self.placePieces()
                 self.checkEvents()
+
+                if self.opponent_just_moved != False:
+                    old, new = self.opponent_just_moved
+
+                    pygame.draw.rect(self.window, (255, 0, 0), (self.boardPos[old] + (50, 50)), 5)
+                    pygame.draw.rect(self.window, (255, 0, 0), (self.boardPos[new] + (50, 50)), 5)
+
+                    self.opponent_just_moved_iter += 1
+
+                    if self.opponent_just_moved_iter == 100:
+                        self.opponent_just_moved = False
+                        self.opponent_just_moved_iter = 0
 
                 if self.selected_piece_pos != None:
                     pygame.draw.rect(self.window, (0, 0, 255), (self.boardPos[self.selected_piece_pos] + (50, 50)), 5)
