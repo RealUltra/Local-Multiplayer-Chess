@@ -39,7 +39,7 @@ def handle_client(connection, address):
                         else:
                             server.send("[WAITING] " + str(code), connection)
 
-                elif message.strip() == "[JOIN RANDOM]":
+                elif message.strip() == "[JOIN RANDOM]" and connection not in clients:
                     serverFound = False
 
                     for s in servers:
@@ -75,10 +75,11 @@ def handle_client(connection, address):
 
                     if message.strip() != "[GAME OVER]":
                         for conn in servers[code]:
-                            servers.send("[OPPONENT LEFT]", conn)
+                            server.send("[OPPONENT LEFT]", conn)
                             clients.pop(conn)
 
-                    servers.pop(code)
+                    if code in servers:
+                      servers.pop(code)
 
                 elif message.strip() == "[QUIT]":
                     if connection in clients:
@@ -87,7 +88,7 @@ def handle_client(connection, address):
                         clients.pop(connection)
 
                         for conn in servers[code]:
-                            servers.send("[OPPONENT LEFT]", conn)
+                            server.send("[OPPONENT LEFT]", conn)
                             clients.pop(conn)
 
                         servers.pop(code)
@@ -98,27 +99,8 @@ def handle_client(connection, address):
                     print(f"[ACTIVE CONNECTIONS] {server.clients}\n")
                     break
 
-        except:
-            if connection in clients:
-                clients.pop(connection)
-
-            for code in servers:
-                if connection in servers[code]:
-                    servers[code].remove(connection)
-
-                    if servers[code] != []:
-                        for conn in servers[code]:
-                            server.send("[OPPONENT LEFT]", conn)
-                            clients.pop(conn)
-
-                    servers.pop(code)
-                    break
-
-            server.clients -= 1
-            server.CLIENTS.remove(connection)
-            print(f"\n[CLIENT DISCONNECTED] [{address}] Just Disconnected!")
-            print(f"[ACTIVE CONNECTIONS] {server.clients}\n")
-            break
+        except Exception as e:
+            print("Error:", e)
 
     connection.close()
 

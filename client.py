@@ -551,4 +551,4 @@ class Chess():
 
         return False
 
-Chess()
+Chess() 
