@@ -26,7 +26,7 @@ class Chess():
     def __init__(self):
         pygame.init()
 
-        self.client = network.Client(self.handle_message, "192.168.100.5", 5555, 4096)
+        self.client = network.Client(self.handle_message, "", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
 
         self.HEIGHT = 600
         self.WIDTH = 500
