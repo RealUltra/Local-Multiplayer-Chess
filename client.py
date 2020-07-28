@@ -289,7 +289,7 @@ class Chess():
         for piece in self.beaten_pieces:
             if piece.startswith(self.teams[self.team][0].upper() + "."):
                 a, b = 50, 100
-                self.window.blit(self.ALL_PIECES[piece], ((otherTeam * 50),  50))
+                self.window.blit(self.ALL_PIECES[piece], ((otherTeam * 50),  0))
                 otherTeam += 1
 
             else:
@@ -551,4 +551,4 @@ class Chess():
 
         return False
 
-Chess() 
+Chess()
