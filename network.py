@@ -67,8 +67,12 @@ class Client(object):
 
     def get_messages(self):
         while 1:
-            message = self.pickle.loads(self.SOCKET.recv(self.bytes))
-            self.handle_message(message)
+            try:
+              message = self.pickle.loads(self.SOCKET.recv(self.bytes))
+              self.handle_message(message)
+
+            except:
+                break
 
     def connect(self):
         if not self.CONNECTED:
