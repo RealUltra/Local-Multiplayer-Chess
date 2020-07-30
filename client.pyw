@@ -26,7 +26,7 @@ class Chess():
     def __init__(self):
         pygame.init()
 
-        self.client = network.Client(self.handle_message, "192.168.100.8", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
+        self.client = network.Client(self.handle_message, "192.168.100.14", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
 
         self.HEIGHT = 650
         self.WIDTH = 500
@@ -135,7 +135,6 @@ class Chess():
 
     def joinGameWithCode(self):
         self.window.fill((0, 0, 0))
-
         font = pygame.font.Font('fonts\\cpgb.ttf', 60)
         self.window.blit(font.render("Join", True, (255, 215, 0), (0, 0, 0)), (50, 0, 500, 100))
         self.window.blit(font.render("A Game", True, (255, 215, 0), (0, 0, 0)), (95, 70, 500, 100))
@@ -189,6 +188,8 @@ class Chess():
 
                 self.placePieces()
                 self.checkEvents()
+
+                print(self.check(self.team))
 
                 if self.opponent_just_moved != False:
                     old, new = self.opponent_just_moved
@@ -306,7 +307,13 @@ class Chess():
             self.selected_piece_pos = pos
 
         else:
-            if self.selected_piece_pos != None and self.valid_move(self.selected_piece_pos, pos) and self.opponent_move != None:
+            if not self.valid_move(self.selected_piece_pos, pos):
+                ctypes.windll.user32.MessageBoxW(0, "That Is Not A Valid Move!", "Invalid Move", 48)
+
+            elif self.opponent_move == None:
+                ctypes.windll.user32.MessageBoxW(0, "It Is Not Your Turn, Please Let The Other Player Move!", "Not Your Turn", 48)
+
+            elif self.selected_piece_pos != None:
                 self.move(self.selected_piece_pos, pos)
                 self.client.send("[MOVE] " + self.selected_piece_pos + "|" + pos)
                 self.opponent_move = None
@@ -383,14 +390,22 @@ class Chess():
     def valid_move(self, initial_pos, final_pos):
         return final_pos in self.get_available_spots(initial_pos)
 
+    def check(self, team):
+        starter = self.teams[{0:1, 1:0}[team]][0].upper() + "."
+        kingPos = self.teams[team][0].upper() + ".K"
+
+        return True in [True if f.piece.startswith(starter) and kingPos in self.get_available_spots(f.pos) else False for f in self.onboard_pieces]
+
     def get_available_spots(self, piece_pos):
         moveable_spots = []
 
-        piece_type = "".join([f.piece if f.pos == piece_pos else "" for f in self.onboard_pieces]).split('.')[1].upper()
+        piece = "".join([f.piece if f.pos == piece_pos else "" for f in self.onboard_pieces])
+        piece_type = piece.split('.')[1].upper()
         onboard_pieces_pos = [f.pos for f in self.onboard_pieces]
+        team = {"W":0, "B":1}[piece.split('.')[0].upper()]
 
         if piece_type == "P":
-            if self.team == 0: # If Team Is White
+            if team == 0: # If Team Is White
                 if (piece_pos[0] + str(int(piece_pos[1]) + 1)) not in onboard_pieces_pos:
                     moveable_spots.append(piece_pos[0] + str(int(piece_pos[1]) + 1))
 
@@ -398,11 +413,11 @@ class Chess():
                     moveable_spots.append(piece_pos[0] + str(int(piece_pos[1]) + 2))
 
                 if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) in onboard_pieces_pos \
-                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[self.team].upper()[0] + "."):
+                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[team].upper()[0] + "."):
                     moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1))
 
                 if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) in onboard_pieces_pos \
-                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[self.team].upper()[0] + "."):
+                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[team].upper()[0] + "."):
                     moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1))
 
             else:
@@ -413,11 +428,11 @@ class Chess():
                     moveable_spots.append(piece_pos[0] + str(int(piece_pos[1]) - 2))
 
                 if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) in onboard_pieces_pos \
-                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[self.team].upper()[0] + "."):
+                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[team].upper()[0] + "."):
                     moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1))
 
                 if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) in onboard_pieces_pos \
-                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[self.team].upper()[0] + "."):
+                        and not "".join([f.piece if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1))  else "" for f in self.onboard_pieces]).startswith(self.teams[team].upper()[0] + "."):
                     moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1))
 
         if piece_type == "R" or piece_type == "Q":
@@ -425,7 +440,7 @@ class Chess():
                 pos = piece_pos[0] + str(num)
 
                 if pos in onboard_pieces_pos:
-                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -435,7 +450,7 @@ class Chess():
                 pos = piece_pos[0] + str(int(piece_pos[1]) - num)
 
                 if pos in onboard_pieces_pos:
-                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -445,7 +460,7 @@ class Chess():
                 pos = chr(ord(piece_pos[0]) - (letter - ord("A"))) + str(piece_pos[1])
 
                 if pos in onboard_pieces_pos:
-                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -455,7 +470,7 @@ class Chess():
                 pos = chr(letter) + str(piece_pos[1])
 
                 if pos in onboard_pieces_pos:
-                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else "" for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -463,28 +478,28 @@ class Chess():
 
 
         if piece_type == "H":
-            if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 2))
 
-            if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 2))
 
-            if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 2))
 
-            if (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) + 1))
 
-            if (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) + 1))
 
-            if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 2))
 
-            if (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 2) + str(int(piece_pos[1]) - 1))
 
-            if (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 2) + str(int(piece_pos[1]) - 1))
 
         if piece_type == "B" or piece_type == "Q":
@@ -504,7 +519,7 @@ class Chess():
                 pos = letter + str(num)
 
                 if pos in [f.pos for f in self.onboard_pieces]:
-                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -526,7 +541,7 @@ class Chess():
                 pos = letter + str(num)
 
                 if pos in [f.pos for f in self.onboard_pieces]:
-                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -548,7 +563,7 @@ class Chess():
                 pos = letter + str(num)
 
                 if pos in [f.pos for f in self.onboard_pieces]:
-                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
@@ -570,35 +585,35 @@ class Chess():
                 pos = letter + str(num)
 
                 if pos in [f.pos for f in self.onboard_pieces]:
-                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[self.team][0].upper():
+                    if "".join([f.piece[0] if f.pos == pos else '' for f in self.onboard_pieces]) != self.teams[team][0].upper():
                         moveable_spots.append(pos)
                     break
 
                 moveable_spots.append(pos)
 
         if piece_type == "K":
-            if ((piece_pos[0] + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((piece_pos[0] + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(piece_pos[0] + str(int(piece_pos[1]) + 1))
 
-            if ((piece_pos[0] + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((piece_pos[0] + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (piece_pos[0] + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(piece_pos[0] + str(int(piece_pos[1]) - 1))
 
-            if ((chr(ord(piece_pos[0]) - 1) + piece_pos[1]) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) - 1) + piece_pos[1]) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 1) + piece_pos[1])
 
-            if ((chr(ord(piece_pos[0]) + 1) + piece_pos[1]) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) + 1) + piece_pos[1]) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + piece_pos[1]) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 1) + piece_pos[1])
 
-            if ((chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) + 1))
 
-            if ((chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) + 1))
 
-            if ((chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) + 1) + str(int(piece_pos[1]) - 1))
 
-            if ((chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[self.team][0].upper()):
+            if ((chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) in self.boardPos) and ("".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) == "" or "".join([f.piece[0] if f.pos == (chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1)) else "" for f in self.onboard_pieces]) != self.teams[team][0].upper()):
                 moveable_spots.append(chr(ord(piece_pos[0]) - 1) + str(int(piece_pos[1]) - 1))
 
         return moveable_spots
