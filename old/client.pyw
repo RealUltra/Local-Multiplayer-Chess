@@ -26,13 +26,14 @@ class Chess():
     def __init__(self):
         pygame.init()
 
-        self.client = network.Client(self.handle_message, "192.168.100.14", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
+        self.client = network.Client(self.handle_message, "localhost", 5555, 4096) # In the blank string, Put In The IP Address Shown By The Server
 
         self.HEIGHT = 650
         self.WIDTH = 500
 
         self.window = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Chess")
+
         self.run = True
         self.mode = "MainMenu"
 
@@ -80,6 +81,7 @@ class Chess():
             self.move(old.strip(), new.strip())
             self.opponent_just_moved = [old.strip(), new.strip()]
             self.opponent_just_moved_iter = 0
+            self.selected_piece_pos = None
 
         if message.strip() == "[JOIN WITH CODE FAILED]":
             ctypes.windll.user32.MessageBoxW(0, "Invalid Code", "Failed To Join", 48)
@@ -189,8 +191,6 @@ class Chess():
                 self.placePieces()
                 self.checkEvents()
 
-                print(self.check(self.team))
-
                 if self.opponent_just_moved != False:
                     old, new = self.opponent_just_moved
 
@@ -288,13 +288,12 @@ class Chess():
                 self.client.send("[JOIN] " + pyperclip.paste().strip())
 
     def move(self, initial_pos, final_pos):
-        for piece in self.onboard_pieces:
-            if piece.pos == final_pos:
-                self.onboard_pieces.remove(piece)
-                self.beaten_pieces.append(piece.piece)
+        if final_pos in [f.pos for f in self.onboard_pieces]:
+            piece = self.onboard_pieces[[f.pos for f in self.onboard_pieces].index(final_pos)]
+            self.onboard_pieces.remove(piece)
+            self.beaten_pieces.append(piece.piece)
 
-            if piece.pos == initial_pos:
-                piece.pos = final_pos
+        self.onboard_pieces[[f.pos for f in self.onboard_pieces].index(initial_pos)].pos = final_pos
 
     def posPressed(self, pos):
         found = False

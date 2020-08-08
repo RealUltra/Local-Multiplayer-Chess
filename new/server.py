@@ -1,0 +1,129 @@
+import pygame
+import pickle
+import password
+import network
+import board
+
+servers = {}
+clients = {}
+
+def handle_client(connection, address):
+    while 1:
+        try:
+            message = pickle.loads(connection.recv(4096))
+
+            if message != "":
+                print(f"[{address}] {message}")
+
+                if message[0] == 'BOARD':
+                    for conn in servers[clients[connection]]:
+                        if conn != connection:
+                            server.send(message, conn)
+                            break
+
+                elif message[0] == "JOIN":
+                    code = message[1]
+
+                    if code not in servers:
+                        server.send(["JOIN WITH CODE FAILED"], connection)
+
+                    elif len(servers[code]) == 2:
+                        server.send(["JOIN WITH CODE FULL"], connection)
+
+                    else:
+                        servers[code].append(connection)
+                        clients[connection] = code
+
+                        if len(servers[code]) == 2:
+                            f = 0
+                            for conn in servers[code]:
+                                server.send(["STARTED", f], conn)
+                                server.send(["BOARD", board.Board()], conn)
+                                f += 1
+
+                        else:
+                            server.send(["WAITING", code], connection)
+
+                elif message[0] == "JOIN RANDOM" and connection not in clients:
+                    serverFound = False
+
+                    for s in servers:
+                        if len(servers[s]) < 2:
+                            serverFound = True
+                            servers[s].append(connection)
+                            clients[connection] = s
+
+                            if len(servers[s]) == 2:
+                                f = 0
+                                for conn in servers[s]:
+                                    server.send(['STARTED', f], conn)
+                                    server.send(['BOARD', board.Board()], conn)
+                                    f += 1
+
+                            else:
+                                server.send(["WAITING", s], connection)
+
+                            break
+
+                    if not serverFound:
+                        code = password.passwordCreator()
+                        servers[code] = [connection]
+                        clients[connection] = code
+                        server.send(["WAITING", code], connection)
+
+                elif message[0] == "LEAVING WAIT" or message[0] == "GAME OVER":
+                    code = clients[connection]
+
+                    if code in servers:
+                        servers[code].remove(connection)
+
+                    clients.pop(connection)
+
+                    if message[0] != "GAME OVER":
+                        for conn in servers[code]:
+                            server.send(["OPPONENT LEFT"], conn)
+                            clients.pop(conn)
+
+                    if code in servers:
+                      servers.pop(code)
+
+                elif message[0] == "QUIT":
+                    if connection in clients:
+                        code = clients[connection]
+                        servers[code].remove(connection)
+                        clients.pop(connection)
+
+                        for conn in servers[code]:
+                            server.send(["OPPONENT LEFT"], conn)
+                            clients.pop(conn)
+
+                        servers.pop(code)
+
+                    server.clients -= 1
+                    server.CLIENTS.remove(connection)
+                    print(f"\n[CLIENT DISCONNECTED] [{address}] Just Disconnected!")
+                    print(f"[ACTIVE CONNECTIONS] {server.clients}\n")
+                    break
+
+        except Exception as e:
+            print(e)
+            if connection in clients:
+                code = clients[connection]
+                servers[code].remove(connection)
+                clients.pop(connection)
+
+                for conn in servers[code]:
+                    server.send(["OPPONENT LEFT"], conn)
+                    clients.pop(conn)
+
+                servers.pop(code)
+
+            server.clients -= 1
+            server.CLIENTS.remove(connection)
+            print(f"\n[CLIENT DISCONNECTED] [{address}] Just Disconnected!")
+            print(f"[ACTIVE CONNECTIONS] {server.clients}\n")
+            break
+
+    connection.close()
+
+server = network.Server(handle_client, 5555, 'localhost')
