@@ -52,6 +52,23 @@ class Chess():
 
                 self.board.place(self.window, self.team)
 
+                if self.opponent_just_moved and self.board.logs != []:
+                    _, old, new, _ = self.board.logs[len(self.board.logs) - 1]
+
+                    if "".join([str(f.team) if f.pos == new else "" for f in self.board.pieces['active']]) != str(self.team):
+                        pygame.draw.rect(self.window, (255, 0, 0), (self.board.positions[old][self.team] + (50, 50)), 5)
+                        pygame.draw.rect(self.window, (255, 0, 0), (self.board.positions[new][self.team] + (50, 50)), 5)
+
+                        self.opponent_just_moved_iter += 1
+
+                        if self.opponent_just_moved_iter == 100:
+                            self.opponent_just_moved = False
+                            self.opponent_just_moved_iter = 0
+
+                    else:
+                        self.opponent_just_moved = False
+                        self.opponent_just_moved_iter = 0
+
             elif self.mode == "MainMenu":
                 self.MainMenu()
 

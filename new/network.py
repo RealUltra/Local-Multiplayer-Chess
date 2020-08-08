@@ -72,8 +72,7 @@ class Client():
 
               if message == b'':
                   continue
-            except Exception as e:
-                print(e)
+            except:
                 break
 
             self.handle_message(self.pickle.loads(message))
