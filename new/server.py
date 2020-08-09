@@ -1,4 +1,3 @@
-import pygame
 import pickle
 import password
 import network
@@ -13,12 +12,13 @@ def handle_client(connection, address):
             message = pickle.loads(connection.recv(4096))
 
             if message != "":
-                print(f"[{address}] {message}")
+                print(f"[{address}]",  message)
 
                 if message[0] == 'BOARD':
                     for conn in servers[clients[connection]]:
                         if conn != connection:
                             server.send(message, conn)
+                            print(f"[SERVER][{conn.getpeername()}]", message, "\n")
                             break
 
                 elif message[0] == "JOIN":
@@ -26,9 +26,11 @@ def handle_client(connection, address):
 
                     if code not in servers:
                         server.send(["JOIN WITH CODE FAILED"], connection)
+                        print(f"[SERVER][{address}]", ["JOIN WITH CODE FAILED"], "\n")
 
                     elif len(servers[code]) == 2:
                         server.send(["JOIN WITH CODE FULL"], connection)
+                        print(f"[SERVER][{address}]", ["JOIN WITH CODE FULL"], "\n")
 
                     else:
                         servers[code].append(connection)
@@ -38,11 +40,15 @@ def handle_client(connection, address):
                             f = 0
                             for conn in servers[code]:
                                 server.send(["STARTED", f], conn)
-                                server.send(["BOARD", board.Board()], conn)
+                                print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
+                                b = board.Board()
+                                server.send(["BOARD", b], conn)
+                                print(f"[SERVER][{conn.getpeername()}]", ['BOARD', b], "\n")
                                 f += 1
 
                         else:
                             server.send(["WAITING", code], connection)
+                            print(f"[SERVER][{address}]", ['WAITING', code], "\n")
 
                 elif message[0] == "JOIN RANDOM" and connection not in clients:
                     serverFound = False
@@ -57,11 +63,15 @@ def handle_client(connection, address):
                                 f = 0
                                 for conn in servers[s]:
                                     server.send(['STARTED', f], conn)
-                                    server.send(['BOARD', board.Board()], conn)
+                                    print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
+                                    b = board.Board()
+                                    server.send(['BOARD', b], conn)
+                                    print(f"[SERVER][{conn.getpeername()}]", ['BOARD', b], "\n")
                                     f += 1
 
                             else:
                                 server.send(["WAITING", s], connection)
+                                print(f"[SERVER][{address}]", ['WAITING', s], "\n")
 
                             break
 
@@ -70,6 +80,7 @@ def handle_client(connection, address):
                         servers[code] = [connection]
                         clients[connection] = code
                         server.send(["WAITING", code], connection)
+                        print(f"[SERVER][{address}]", ['WAITING', code], "\n")
 
                 elif message[0] == "LEAVING WAIT" or message[0] == "GAME OVER":
                     code = clients[connection]
@@ -82,6 +93,7 @@ def handle_client(connection, address):
                     if message[0] != "GAME OVER":
                         for conn in servers[code]:
                             server.send(["OPPONENT LEFT"], conn)
+                            print(f"[SERVER][{conn.getpeername()}]", ['OPPONENT LEFT'], "\n")
                             clients.pop(conn)
 
                     if code in servers:
@@ -95,6 +107,7 @@ def handle_client(connection, address):
 
                         for conn in servers[code]:
                             server.send(["OPPONENT LEFT"], conn)
+                            print(f"[SERVER][{conn.getpeername()}]", ["OPPONENT LEFT"], "\n")
                             clients.pop(conn)
 
                         servers.pop(code)
@@ -114,6 +127,7 @@ def handle_client(connection, address):
 
                 for conn in servers[code]:
                     server.send(["OPPONENT LEFT"], conn)
+                    print(f"[SERVER][{conn.getpeername()}]", ['OPPONENT LEFT'], "\n")
                     clients.pop(conn)
 
                 servers.pop(code)
@@ -126,4 +140,5 @@ def handle_client(connection, address):
 
     connection.close()
 
+print('\n')
 server = network.Server(handle_client, 5555, 'localhost')

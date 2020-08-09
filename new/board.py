@@ -197,3 +197,33 @@ class Board():
     def init(self, window):
         self.draw(window, 0)
         self.draw(window, 1)
+
+    def castling_validity(self, team, direction):
+        if direction == 0: # Left
+            letter = "A"
+            middle = ['B', 'C', 'D']
+        elif direction == 1: # Right
+            letter = 'H'
+            middle = ['G', 'F']
+
+        if team == 0:
+            num = '1'
+        elif team == 1:
+            num = '8'
+
+        for piece, old_pos, new_pos, beaten_piece in self.logs:
+            if (piece.type == "K" and piece.team == team) or (piece.type == 'R' and piece.team == team and old_pos == (letter + num)):
+                return False
+
+        rookExists = False
+        for piece in self.pieces['active']:
+            if piece.pos == (letter + num) and piece.type == 'R' and piece.team == team:
+                rookExists = True
+
+            if piece.pos[0] in middle and piece.pos[1] == num:
+                return False
+
+        if not rookExists:
+            return False
+
+        return True

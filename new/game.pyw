@@ -50,6 +50,13 @@ class Chess():
                         pygame.draw.rect(self.window, (0, 255, 0), (x, y, 50, 50))
                         pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
 
+                    if self.selected.type == 'K':
+                        for f in range(2):
+                            if self.board.castling_validity(self.team, f):
+                                x, y = self.board.positions[{0:"C", 1:'G'}[f] + {0:"1", 1:"8"}[self.team]][self.team]
+                                pygame.draw.rect(self.window, (255,255,0), (x, y, 50, 50))
+                                pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
+
                 self.board.place(self.window, self.team)
 
                 if self.opponent_just_moved and self.board.logs != []:
@@ -121,8 +128,37 @@ class Chess():
 
                                 break
 
-                            else:
-                                messagebox.showinfo('Invalid Move', "You can't move there!")
+                            if self.selected.type == 'K':
+                                for f in range(2):
+                                    num = {0:"1", 1:"8"}[self.team]
+                                    if self.board.castling_validity(self.team, f):
+                                        if pos == ({0:"C", 1:'G'}[f] + num):
+                                            self.board.move(self.selected, pos)
+
+                                            for piece in self.board.pieces['active']:
+                                                if piece.type == 'R' and piece.team == self.team and piece.pos == ({0:"A", 1:'H'}[f] + num):
+                                                    self.board.move(piece, {0:"D", 1:"F"}[f] + num)
+                                                    break
+
+                                            self.board.turn = {0:1, 1:0}[self.board.turn]
+
+                                            if self.board.check(self.team):
+                                                self.board.undo()
+                                                messagebox.showerror("Invalid Move", "It will be a check if you move there!")
+                                            else:
+                                                self.client.send(['BOARD', self.board])
+
+                                                if self.board.checkmate({0:1, 1:0}[self.team]):
+                                                    messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
+                                                    self.client.send(["GAME OVER"])
+                                                    self.mode = "MainMenu"
+
+                                                elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
+                                                    messagebox.showwarning('Check', "It Is a Check For The Other Team!")
+
+                                            break
+
+
                 else:
                     messagebox.showerror("Its Not Your Turn", "Please Let The Other Player Move!")
 
@@ -206,7 +242,7 @@ class Chess():
             self.mode = "Game"
 
         if message[0] == "OPPONENT LEFT":
-            messagebox.showinfo("Failed To Join", "Your Opponent Just Left! You Win By Default!")
+            messagebox.showinfo("You Won", "Your Opponent Just Left! You Win By Default!")
             self.mode = "MainMenu"
 
     def reset_game(self):
