@@ -2,6 +2,7 @@ import pickle
 import password
 import network
 import board
+import chat
 
 servers = {}
 clients = {}
@@ -9,7 +10,7 @@ clients = {}
 def handle_client(connection, address):
     while 1:
         try:
-            message = pickle.loads(connection.recv(4096))
+            message = pickle.loads(connection.recv(4096 * 2))
 
             if message != "":
                 print(f"[{address}]",  message)
@@ -20,6 +21,13 @@ def handle_client(connection, address):
                             server.send(message, conn)
                             print(f"[SERVER][{conn.getpeername()}]", message, "\n")
                             break
+
+                elif message[0] == 'MODS':
+                    code = clients[connection]
+                    b = board.Board(mods=message[1])
+                    for conn in servers[code]:
+                        server.send(["BOARD", b], conn)
+                        print(f"[SERVER][{conn.getpeername()}]", ['BOARD', b], "\n")
 
                 elif message[0] == "JOIN":
                     code = message[1]
@@ -41,9 +49,6 @@ def handle_client(connection, address):
                             for conn in servers[code]:
                                 server.send(["STARTED", f], conn)
                                 print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
-                                b = board.Board()
-                                server.send(["BOARD", b], conn)
-                                print(f"[SERVER][{conn.getpeername()}]", ['BOARD', b], "\n")
                                 f += 1
 
                         else:
@@ -64,9 +69,6 @@ def handle_client(connection, address):
                                 for conn in servers[s]:
                                     server.send(['STARTED', f], conn)
                                     print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
-                                    b = board.Board()
-                                    server.send(['BOARD', b], conn)
-                                    print(f"[SERVER][{conn.getpeername()}]", ['BOARD', b], "\n")
                                     f += 1
 
                             else:

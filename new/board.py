@@ -1,8 +1,9 @@
 import pygame
+import random
 import pieces
 
 class Board():
-    def __init__(self):
+    def __init__(self, mods={'check':True, 'checkmate':True, 'show_valid_moves':True, 'stalemate':True}):
         self.pieces = {
             'active': [
                 pieces.Pawn(self, 'A2', 0),
@@ -52,6 +53,8 @@ class Board():
         self.positions = {}
         self.turn = 0
         self.logs = []
+        self.mods = mods
+        self.to_draw = 0
 
     def draw(self, window, team):
         color = (62,66,75)
@@ -109,6 +112,9 @@ class Board():
                 window.blit(font.render(chr(ord("H") - letter + ord("A")), True, (255, 255, 255), (34,32,33)), (bottom[0]+15, bottom[1]+65))
 
     def move(self, initial_piece, final_pos):
+        if initial_piece.type == 'P':
+            self.to_draw = 0
+
         oldPos = initial_piece.pos
         beaten = [f if f.pos == final_pos else None for f in self.pieces['active']]
 
@@ -123,6 +129,7 @@ class Board():
             self.pieces['inactive'].append(beaten[0])
             self.pieces['active'].remove(beaten[0])
             beaten_piece = beaten[0]
+            self.to_draw = 0
 
         initial_piece.pos = final_pos
 
@@ -149,6 +156,9 @@ class Board():
             piece.draw(window, team)
 
     def check(self, team):
+        if not self.mods['check']:
+            return False
+
         kingPos = "".join([f.pos if f.type == 'K' and f.team == team else "" for f in self.pieces['active']])
 
         for piece in self.pieces['active']:
@@ -161,8 +171,8 @@ class Board():
         for piece in self.pieces['active']:
             if piece.type == 'P':
                 if (piece.team == 0 and piece.pos[1] == '8') or (piece.team == 1 and piece.pos[1] == '1'):
-                    self.pieces['active'].append(pieces.Queen(self, piece.pos, piece.team))
-                    self.pieces['active'].remove(piece)
+                    self.changing_pawn = piece
+                    self.handle_pawn_transformation(random.choice(['Queen', 'Rook', 'Horse', 'Bishop']))
                     break
 
     def undo(self):
@@ -178,19 +188,17 @@ class Board():
             self.pieces['active'].append(beaten)
 
     def checkmate(self, team):
+        if not self.mods['checkmate']:
+            return False
+
         if not self.check(team):
             return False
 
         for piece in self.pieces['active']:
             if piece.team == team:
                 for pos in piece.valid_moves():
-                    self.move(piece, pos)
-
-                    if not self.check(team):
-                        self.undo()
+                    if not self.check_upon_move(piece, pos, team):
                         return False
-
-                    self.undo()
 
         return True
 
@@ -227,3 +235,33 @@ class Board():
             return False
 
         return True
+
+    def stalemate(self, team):
+        if not self.mods['stalemate']:
+            return False
+
+        if self.check(team):
+            return False
+
+        for piece in self.pieces['active']:
+            if piece.team == team:
+                for pos in piece.valid_moves():
+                    if not self.check_upon_move(piece, pos, team):
+                        return False
+
+        return True
+
+    def handle_pawn_transformation(self, piece):
+        self.pieces['active'].append(eval("pieces." + piece)(self, self.changing_pawn.pos, self.changing_pawn.team))
+        self.pieces['active'].remove(self.changing_pawn)
+
+    def check_upon_move(self, initial_piece, final_pos, team):
+        self.move(initial_piece, final_pos)
+
+        if self.check(team):
+            self.undo()
+            return True
+
+        self.undo()
+
+        return False

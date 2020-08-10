@@ -252,6 +252,7 @@ class Queen():
         window.blit(pygame.image.load('Pieces\\' + {0:'white', 1:'black'}[self.team] + "Queen.png"), (x, y))
 
     def valid_moves(self):
+        # Rook
         moveable_spots = []
         onboard_pieces_pos = [f.pos for f in self.board.pieces['active']]
 
@@ -295,6 +296,7 @@ class Queen():
 
             moveable_spots.append(pos)
 
+        # Bishop
         letter = self.pos[0]
         num = int(self.pos[1])
 

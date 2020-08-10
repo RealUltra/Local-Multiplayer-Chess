@@ -1,8 +1,11 @@
+import os
 import pygame
 import pyperclip
+import threading
 import messagebox
 import board
 import network
+import chat
 
 class Chess():
     def __init__(self):
@@ -45,17 +48,18 @@ class Chess():
                     x, y = self.board.positions[self.selected.pos][self.team]
                     pygame.draw.rect(self.window, (0, 0, 255), (x, y, 50, 50), 5)
 
-                    for pos in self.selected.valid_moves():
-                        x, y = self.board.positions[pos][self.team]
-                        pygame.draw.rect(self.window, (0, 255, 0), (x, y, 50, 50))
-                        pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
+                    if self.board.mods['show_valid_moves']:
+                        for pos in self.selected.valid_moves():
+                            x, y = self.board.positions[pos][self.team]
+                            pygame.draw.rect(self.window, (0, 255, 0), (x, y, 50, 50))
+                            pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
 
-                    if self.selected.type == 'K':
-                        for f in range(2):
-                            if self.board.castling_validity(self.team, f):
-                                x, y = self.board.positions[{0:"C", 1:'G'}[f] + {0:"1", 1:"8"}[self.team]][self.team]
-                                pygame.draw.rect(self.window, (255,255,0), (x, y, 50, 50))
-                                pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
+                        if self.selected.type == 'K':
+                            for f in range(2):
+                                if self.board.castling_validity(self.team, f):
+                                    x, y = self.board.positions[{0:"C", 1:'G'}[f] + {0:"1", 1:"8"}[self.team]][self.team]
+                                    pygame.draw.rect(self.window, (255,255,0), (x, y, 50, 50))
+                                    pygame.draw.rect(self.window, (0, 0, 0), (x, y, 50, 50), 5)
 
                 self.board.place(self.window, self.team)
 
@@ -110,25 +114,30 @@ class Chess():
                         x, y = self.board.positions[pos][self.team]
                         if m_x > x and m_y > y and m_x < (x + 50) and m_y < (y + 50):
                             if pos in self.selected.valid_moves():
-                                self.board.move(self.selected, pos)
-
-                                if self.board.check(self.team):
-                                    self.board.undo()
-                                    messagebox.showerror("Invalid Move", "It will be a check if you move there!")
-                                else:
+                                if not self.board.check_upon_move(self.selected, pos, self.team):
+                                    self.board.move(self.selected, pos)
                                     self.client.send(['BOARD', self.board])
+                                else:
+                                    messagebox.showerror("Invalid Move", "It will be a Check if you Move There!")
 
-                                    if self.board.checkmate({0:1, 1:0}[self.team]):
-                                        messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
-                                        self.client.send(["GAME OVER"])
-                                        self.mode = "MainMenu"
+                                if self.board.checkmate({0:1, 1:0}[self.team]):
+                                    messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
+                                    self.client.send(["GAME OVER"])
+                                    self.chat.window.destroy()
+                                    self.mode = "MainMenu"
 
-                                    elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
-                                        messagebox.showwarning('Check', "It Is a Check For The Other Team!")
+                                elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
+                                    messagebox.showwarning('Check', "It Is a Check For The Other Team!")
+
+                                elif self.board.stalemate({0:1, 1:0}[self.team]):
+                                    messagebox.showinfo('Game Over', "Its A Stalemate For The Other Team!")
+                                    self.client.send(["GAME OVER"])
+                                    self.chat.window.destroy()
+                                    self.mode = "MainMenu"
 
                                 break
 
-                            if self.selected.type == 'K':
+                            if self.selected.type == 'K' and not self.board.check(self.team):
                                 for f in range(2):
                                     num = {0:"1", 1:"8"}[self.team]
                                     if self.board.castling_validity(self.team, f):
@@ -151,10 +160,17 @@ class Chess():
                                                 if self.board.checkmate({0:1, 1:0}[self.team]):
                                                     messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
                                                     self.client.send(["GAME OVER"])
+                                                    self.chat.window.destroy()
                                                     self.mode = "MainMenu"
 
                                                 elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
                                                     messagebox.showwarning('Check', "It Is a Check For The Other Team!")
+
+                                                elif self.board.stalemate({0:1, 1:0}[self.team]):
+                                                    messagebox.showinfo('Game Over', "Its A Stalemate For The Other Team!")
+                                                    self.client.send(["GAME OVER"])
+                                                    self.chat.window.destroy()
+                                                    self.mode = "MainMenu"
 
                                             break
 
@@ -189,25 +205,40 @@ class Chess():
         whiteKingPos = "".join([f.pos if f.type == 'K' and f.team == 0 else "" for f in self.board.pieces['active']])
         blackKingPos = "".join([f.pos if f.type == 'K' and f.team == 1 else "" for f in self.board.pieces['active']])
         onboard_pieces_pos = [f.pos for f in self.board.pieces['active']]
+        white_pieces = [f if f.team == 0 else None for f in self.board.pieces['active']]
+        black_pieces = [f if f.team == 1 else None for f in self.board.pieces['active']]
 
         onboard_pieces_pos.sort()
 
         kings = [whiteKingPos, blackKingPos]
         kings.sort()
 
+        while 1:
+            if None in white_pieces:
+                white_pieces.remove(None)
+
+            if None in black_pieces:
+                black_pieces.remove(None)
+
+            if None not in black_pieces and None not in white_pieces:
+                break
+
         if whiteKingPos == '':
             messagebox.showinfo("Game Over", "White Won!")
             self.client.send(["GAME OVER"])
+            self.chat.window.destroy()
             self.mode = "MainMenu"
 
         elif blackKingPos == '':
             messagebox.showinfo("Game Over", "Black Won!")
             self.client.send(["GAME OVER"])
+            self.chat.window.destroy()
             self.mode = "MainMenu"
 
-        elif onboard_pieces_pos == kings:
+        elif onboard_pieces_pos == kings or self.board.to_draw == 50:
             messagebox.showinfo("Game Over", "Its A Tie!")
             self.client.send(["GAME OVER"])
+            self.chat.window.destroy()
             self.mode = "MainMenu"
 
     def handle_message(self, message):
@@ -218,13 +249,24 @@ class Chess():
             self.opponent_just_moved_iter = 0
             self.selected = None
 
-            if self.board.checkmate(self.team):
-                messagebox.showinfo("Game Over", "Its a Checkmate for Your Team!")
-                self.client.send(["GAME OVER"])
-                self.mode = "MainMenu"
-            
-            elif self.board.check(self.team):
-                messagebox.showwarning("Check", "Its a Check For Your Team")
+            if self.board.logs == []:
+                messagebox.showinfo('Mods', "\n".join([(a + "; " + str(b)) for a,b in self.board.mods.items()]))
+
+            else:
+                if self.board.checkmate(self.team):
+                    messagebox.showinfo("Game Over", "Its a Checkmate for Your Team!")
+                    self.client.send(["GAME OVER"])
+                    self.chat.window.destroy()
+                    self.mode = "MainMenu"
+
+                elif self.board.check(self.team):
+                    messagebox.showwarning("Check", "Its a Check For Your Team")
+
+                elif self.board.stalemate(self.team):
+                    messagebox.showinfo("Game Over", "Its a Stalemate for Your Team!")
+                    self.client.send(["GAME OVER"])
+                    self.chat.window.destroy()
+                    self.mode = "MainMenu"
 
         if message[0] == "JOIN WITH CODE FAILED":
             messagebox.showerror("Failed To Join", "Invalid Code!")
@@ -241,16 +283,20 @@ class Chess():
             self.reset_game()
             self.mode = "Game"
 
+            if self.team == 0:
+                self.client.send(["MODS", self.get_mods()])
+
         if message[0] == "OPPONENT LEFT":
             messagebox.showinfo("You Won", "Your Opponent Just Left! You Win By Default!")
             self.mode = "MainMenu"
 
     def reset_game(self):
-        self.board = board.Board()
-        self.board.init(self.window)
         self.selected = None
         self.opponent_just_moved = False
         self.opponent_just_moved_iter = 0
+
+        self.board = board.Board()
+        self.board.init(self.window)
 
     def waitingScreen(self, code):
         self.window.fill((0, 0, 0))
@@ -299,6 +345,26 @@ class Chess():
         font = pygame.font.Font('fonts\\cpgb.ttf', 70)
         pygame.draw.rect(self.window, (34, 32, 33), (0, 500, 500, 100))
         self.window.blit(font.render("Exit", True, (255, 0, 0), (34, 32, 33)), (170, 510, 500, 100))
+
+    def get_mods(self):
+        mods = {'check':True, 'checkmate':True, 'show_valid_moves':True, 'stalemate':True}
+
+        if not os.path.exists('mods.txt'):
+            with open('mods.txt', 'w') as w:
+                w.write("\n".join([(a + "; " + b) for a, b in mods.items()]))
+            return mods
+
+        with open('mods.txt', 'r') as w:
+            for data in w.read().split('\n'):
+                mod, ret = data.split('; ')
+
+                if ret.lower().strip() != "false" and ret.lower().strip() != 'true':
+                    mods[mod] = True
+                    continue
+
+                mods[mod] = {'false':False, 'true':True}[ret.lower().strip()]
+
+        return mods
 
 if __name__ == '__main__':
     Chess()
