@@ -1,6 +1,13 @@
 import tkinter
 import tkinter.ttk
-import ttkthemes
+import os
+
+try:
+    import ttkthemes
+except:
+    os.system('pip install ttkthemes')
+    import ttkthemes
+
 import pieces
 
 class PawnTranformer():

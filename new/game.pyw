@@ -1,7 +1,18 @@
 import os
 import sys
-import pygame
-import pyperclip
+
+try:
+    import pygame
+except:
+    os.system("pip install pygame")
+    import pygame
+
+try:
+    import pyperclip
+except:
+    os.system('pip install pyperclip')
+    import pyperclip
+
 import messagebox
 import board
 import network
