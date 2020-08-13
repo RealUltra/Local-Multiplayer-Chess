@@ -1,5 +1,4 @@
 import pygame
-import random
 import pieces
 
 class Board():
@@ -126,9 +125,9 @@ class Board():
         beaten_piece = None
 
         if beaten != []:
-            self.pieces['inactive'].append(beaten[0])
-            self.pieces['active'].remove(beaten[0])
             beaten_piece = beaten[0]
+            self.pieces['inactive'].append(beaten_piece)
+            self.pieces['active'].remove(beaten_piece)
             self.to_draw = 0
 
         initial_piece.pos = final_pos
@@ -137,7 +136,7 @@ class Board():
 
         self.logs.append([initial_piece, oldPos, final_pos, beaten_piece])
 
-        self.checkEvents()
+        #self.checkEvents()
 
     def place(self, window, team):
         yourTeam = 0
@@ -171,8 +170,7 @@ class Board():
         for piece in self.pieces['active']:
             if piece.type == 'P':
                 if (piece.team == 0 and piece.pos[1] == '8') or (piece.team == 1 and piece.pos[1] == '1'):
-                    self.changing_pawn = piece
-                    self.handle_pawn_transformation(random.choice(['Queen', 'Rook', 'Horse', 'Bishop']))
+                    pawn_transformer.PawnTranformer(piece, self.pieces)
                     break
 
     def undo(self):
@@ -250,10 +248,6 @@ class Board():
                         return False
 
         return True
-
-    def handle_pawn_transformation(self, piece):
-        self.pieces['active'].append(eval("pieces." + piece)(self, self.changing_pawn.pos, self.changing_pawn.team))
-        self.pieces['active'].remove(self.changing_pawn)
 
     def check_upon_move(self, initial_piece, final_pos, team):
         self.move(initial_piece, final_pos)

@@ -1,17 +1,21 @@
 import os
+import sys
 import pygame
 import pyperclip
-import threading
 import messagebox
 import board
 import network
-import chat
+import pawn_transformer
 
 class Chess():
     def __init__(self):
         pygame.init()
 
-        self.client = network.Client(self.handle_message, 'localhost', 5555, (4096 ** 2))
+        try:
+            self.client = network.Client(self.handle_message, '172.104.169.112', 5555)
+        except:
+            messagebox.showinfo('Server Powered Off', "The Server Is Inactive so you cannot use this App right now!")
+            sys.exit()
 
         self.HEIGHT = 650
         self.WIDTH = 500
@@ -116,6 +120,7 @@ class Chess():
                             if pos in self.selected.valid_moves():
                                 if not self.board.check_upon_move(self.selected, pos, self.team):
                                     self.board.move(self.selected, pos)
+                                    self.checkEvents()
                                     self.client.send(['BOARD', self.board])
                                 else:
                                     messagebox.showerror("Invalid Move", "It will be a Check if you Move There!")
@@ -123,7 +128,6 @@ class Chess():
                                 if self.board.checkmate({0:1, 1:0}[self.team]):
                                     messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
                                     self.client.send(["GAME OVER"])
-                                    self.chat.window.destroy()
                                     self.mode = "MainMenu"
 
                                 elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
@@ -132,7 +136,6 @@ class Chess():
                                 elif self.board.stalemate({0:1, 1:0}[self.team]):
                                     messagebox.showinfo('Game Over', "Its A Stalemate For The Other Team!")
                                     self.client.send(["GAME OVER"])
-                                    self.chat.window.destroy()
                                     self.mode = "MainMenu"
 
                                 break
@@ -155,12 +158,12 @@ class Chess():
                                                 self.board.undo()
                                                 messagebox.showerror("Invalid Move", "It will be a check if you move there!")
                                             else:
+                                                self.checkEvents()
                                                 self.client.send(['BOARD', self.board])
 
                                                 if self.board.checkmate({0:1, 1:0}[self.team]):
                                                     messagebox.showinfo('Game Over', "Its A Checkmate For The Other Team!")
                                                     self.client.send(["GAME OVER"])
-                                                    self.chat.window.destroy()
                                                     self.mode = "MainMenu"
 
                                                 elif self.board.check({0:1, 1:0}[self.team]) and {0:1, 1:0}[self.board.turn] == self.team:
@@ -169,7 +172,6 @@ class Chess():
                                                 elif self.board.stalemate({0:1, 1:0}[self.team]):
                                                     messagebox.showinfo('Game Over', "Its A Stalemate For The Other Team!")
                                                     self.client.send(["GAME OVER"])
-                                                    self.chat.window.destroy()
                                                     self.mode = "MainMenu"
 
                                             break
@@ -226,20 +228,23 @@ class Chess():
         if whiteKingPos == '':
             messagebox.showinfo("Game Over", "White Won!")
             self.client.send(["GAME OVER"])
-            self.chat.window.destroy()
             self.mode = "MainMenu"
 
         elif blackKingPos == '':
             messagebox.showinfo("Game Over", "Black Won!")
             self.client.send(["GAME OVER"])
-            self.chat.window.destroy()
             self.mode = "MainMenu"
 
         elif onboard_pieces_pos == kings or self.board.to_draw == 50:
             messagebox.showinfo("Game Over", "Its A Tie!")
             self.client.send(["GAME OVER"])
-            self.chat.window.destroy()
             self.mode = "MainMenu"
+
+        for piece in self.board.pieces['active']:
+            if piece.type == 'P':
+                if (piece.team == 0 and piece.pos[1] == '8' and self.team == 0) or (piece.team == 1 and piece.pos[1] == '1' and self.team == 1):
+                    pawn_transformer.PawnTranformer(piece, self.board.pieces)
+                    break
 
     def handle_message(self, message):
         if message[0] == "BOARD":
@@ -256,7 +261,6 @@ class Chess():
                 if self.board.checkmate(self.team):
                     messagebox.showinfo("Game Over", "Its a Checkmate for Your Team!")
                     self.client.send(["GAME OVER"])
-                    self.chat.window.destroy()
                     self.mode = "MainMenu"
 
                 elif self.board.check(self.team):
@@ -265,7 +269,6 @@ class Chess():
                 elif self.board.stalemate(self.team):
                     messagebox.showinfo("Game Over", "Its a Stalemate for Your Team!")
                     self.client.send(["GAME OVER"])
-                    self.chat.window.destroy()
                     self.mode = "MainMenu"
 
         if message[0] == "JOIN WITH CODE FAILED":

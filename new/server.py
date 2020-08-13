@@ -1,16 +1,25 @@
 import pickle
+import socket
 import password
 import network
 import board
-import chat
 
 servers = {}
 clients = {}
 
 def handle_client(connection, address):
+    data = b''
     while 1:
         try:
-            message = pickle.loads(connection.recv(4096 * 2))
+            while 1:
+                packet = connection.recv(4096)
+                data += packet
+                try:
+                    message = pickle.loads(data)
+                    data = b''
+                    break
+                except:
+                    pass
 
             if message != "":
                 print(f"[{address}]",  message)
@@ -49,6 +58,7 @@ def handle_client(connection, address):
                             for conn in servers[code]:
                                 server.send(["STARTED", f], conn)
                                 print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
+                                print(f"[SERVER] Number Of Games: {len(servers)}\n")
                                 f += 1
 
                         else:
@@ -69,6 +79,7 @@ def handle_client(connection, address):
                                 for conn in servers[s]:
                                     server.send(['STARTED', f], conn)
                                     print(f"[SERVER][{conn.getpeername()}]", ['STARTED', f], "\n")
+                                    print(f"[SERVER] Number Of Games: {len(servers)}\n")
                                     f += 1
 
                             else:
@@ -96,6 +107,7 @@ def handle_client(connection, address):
                         for conn in servers[code]:
                             server.send(["OPPONENT LEFT"], conn)
                             print(f"[SERVER][{conn.getpeername()}]", ['OPPONENT LEFT'], "\n")
+                            print(f"[SERVER] Number Of Games: {len(servers)}\n")
                             clients.pop(conn)
 
                     if code in servers:
@@ -121,7 +133,7 @@ def handle_client(connection, address):
                     break
 
         except Exception as e:
-            print(e)
+            print('Error:', e)
             if connection in clients:
                 code = clients[connection]
                 servers[code].remove(connection)
@@ -143,4 +155,4 @@ def handle_client(connection, address):
     connection.close()
 
 print('\n')
-server = network.Server(handle_client, 5555, 'localhost')
+server = network.Server(handle_client, 5555, socket.gethostbyname(''))

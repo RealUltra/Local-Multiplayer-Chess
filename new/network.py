@@ -1,3 +1,4 @@
+import sys
 import socket
 
 class Server():
@@ -47,7 +48,7 @@ class Server():
         self.SOCKET.close()
 
 class Client():
-    def __init__(self, handle_message, HOST, PORT, bytes_limit):
+    def __init__(self, handle_message, HOST, PORT):
         import socket
         import pickle
         import threading
@@ -58,7 +59,6 @@ class Client():
         self.handle_message = handle_message
         self.pickle = pickle
         self.CONNECTED = False
-        self.bytes = bytes_limit
         self.connect()
         threading.Thread(target=self.get_messages).start()
 
@@ -66,16 +66,19 @@ class Client():
         return self.SOCKET.send(self.pickle.dumps(message))
 
     def get_messages(self):
+        data = b''
         while 1:
-            try:
-              message = self.SOCKET.recv(self.bytes)
+            while 1:
+                packet = self.SOCKET.recv(4096)
+                data += packet
+                try:
+                    message = self.pickle.loads(data)
+                    data = b''
+                    break
+                except:
+                    pass
 
-              if message == b'':
-                  continue
-            except:
-                break
-
-            self.handle_message(self.pickle.loads(message))
+            self.handle_message(message)
 
     def connect(self):
         if not self.CONNECTED:
