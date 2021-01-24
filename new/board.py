@@ -158,7 +158,7 @@ class Board():
         if not self.mods['check']:
             return False
 
-        kingPos = "".join([f.pos if f.type == 'K' and f.team == team else "" for f in self.pieces['active']])
+        kingPos = [f.pos for f in self.pieces['active'] if f.type == 'K' and f.team == team][0]
 
         for piece in self.pieces['active']:
             if piece.team != team and kingPos in piece.valid_moves():
@@ -251,11 +251,6 @@ class Board():
 
     def check_upon_move(self, initial_piece, final_pos, team):
         self.move(initial_piece, final_pos)
-
-        if self.check(team):
-            self.undo()
-            return True
-
+        check = self.check(team)
         self.undo()
-
-        return False
+        return check

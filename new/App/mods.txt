@@ -1,3 +1,0 @@
-check; True
-checkmate; True
-show_valid_moves; True

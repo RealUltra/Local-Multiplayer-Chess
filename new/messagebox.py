@@ -1,16 +1,44 @@
-import ctypes
+import tkinter
+import tkinter.messagebox
 
 def showinfo(title, message):
-    return ctypes.windll.user32.MessageBoxW(0, message, title, 64)
+    window = tkinter.Tk()
+    window.withdraw()
+    window.attributes('-topmost', 1)
+    tkinter.messagebox.showinfo(title, message)
+    window.destroy()
+    window.quit()
 
 def showerror(title, message):
-    return ctypes.windll.user32.MessageBoxW(0, message, title, 16)
+    window = tkinter.Tk()
+    window.withdraw()
+    window.attributes('-topmost', 1)
+    tkinter.messagebox.showerror(title, message)
+    window.destroy()
+    window.quit()
 
 def askyesno(title, message):
-    return ctypes.windll.user32.MessageBoxW(4, message, title, 32)
+    window = tkinter.Tk()
+    window.withdraw()
+    window.attributes('-topmost', 1)
+    ans = tkinter.messagebox.askyesno(title, message)
+    window.destroy()
+    window.quit()
+    return ans
 
 def askyesnocancel(title, message):
-    return ctypes.windll.user32.MessageBoxW(3, message, title, 32)
+    window = tkinter.Tk()
+    window.withdraw()
+    window.attributes('-topmost', 1)
+    ans = tkinter.messagebox.askyesnocancel(title, message)
+    window.destroy()
+    window.quit()
+    return ans
 
 def showwarning(title, message):
-    return ctypes.windll.user32.MessageBoxW(0, message, title, 48)
+    window = tkinter.Tk()
+    window.withdraw()
+    window.attributes('-topmost', 1)
+    tkinter.messagebox.showwarning(title, message)
+    window.destroy()
+    window.quit()
